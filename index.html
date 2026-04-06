@@ -120,8 +120,8 @@
 </style>
 </head>
 <body>
-<!-- Mobile Firebase Modal -->
-<div id="fb-modal" class="fb-modal-overlay" style="display:none">
+<!-- Mobile Firebase Modal (ซ่อนไว้ ไม่จำเป็นแล้ว) -->
+<div id="fb-modal" class="fb-modal-overlay" style="display:none!important">
   <div class="fb-modal">
     <h3>⚙️ ตั้งค่า Firebase</h3>
     <p>กรอกค่าจาก Firebase Console เพื่อ sync ข้อมูลกับทุกเครื่อง</p>
@@ -156,8 +156,8 @@
 
   <main class="main">
 
-    <!-- Firebase Setup Banner -->
-    <div class="setup-banner" id="setup-banner">
+    <!-- Firebase Setup Banner (ซ่อนไว้ เพราะ config ฝังในโค้ดแล้ว) -->
+    <div class="setup-banner" id="setup-banner" style="display:none">
       <div class="setup-title">⚙️ ตั้งค่า Firebase เพื่อเชื่อมข้อมูล Cloud</div>
       <div class="setup-body">
         วางค่า <strong>Firebase config</strong> จาก Firebase Console ด้านล่าง แล้วกด "เชื่อมต่อ"<br>
@@ -254,6 +254,16 @@
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, doc, setDoc, onSnapshot, getDoc }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ── Firebase Config (ฝังตรงนี้เลย ไม่ต้องกรอกทุกครั้ง) ──────────────────
+const FIREBASE_CFG = {
+  apiKey:      "AIzaSyAVP5WS5vgF9csajlB7nr3v6rps179TgGQ",
+  projectId:   "koko-personal-financial",
+  appId:       "1:653928428764:web:4c5ecad09e816c1411b019",
+  authDomain:  "koko-personal-financial.firebaseapp.com",
+  storageBucket: "koko-personal-financial.appspot.com",
+  messagingSenderId: "653928428764"
+};
 
 // ── Default state ─────────────────────────────────────────────────────────
 window.state = {
@@ -385,18 +395,12 @@ function setSyncStatus(state, label) {
   bar.style.cursor = (state === 'offline') ? 'pointer' : 'default';
 }
 
-// Auto-reconnect จาก localStorage
+// Auto-connect ทันทีโดยใช้ config ที่ฝังไว้
 window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('fb_cfg');
-  if (saved) {
-    try {
-      const cfg = JSON.parse(saved);
-      document.getElementById('cfg-apiKey').value    = cfg.apiKey    || '';
-      document.getElementById('cfg-projectId').value = cfg.projectId || '';
-      document.getElementById('cfg-appId').value     = cfg.appId     || '';
-      window.connectFirebase();
-    } catch(e) {}
-  }
+  document.getElementById('cfg-apiKey').value    = FIREBASE_CFG.apiKey;
+  document.getElementById('cfg-projectId').value = FIREBASE_CFG.projectId;
+  document.getElementById('cfg-appId').value     = FIREBASE_CFG.appId;
+  window.connectFirebase();
   render();
 });
 
