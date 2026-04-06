@@ -109,10 +109,32 @@
     .main { padding: 16px; }
     .summary-bar { grid-template-columns: repeat(2, 1fr); }
     .setup-banner { display: none; }
+    .fb-modal-overlay { display:flex !important; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+    .fb-modal { background:var(--bg2); border:1px solid var(--amber); border-radius:var(--radius); padding:24px; width:100%; max-width:400px; }
+    .fb-modal h3 { font-size:16px; font-weight:600; color:var(--amber); margin-bottom:8px; }
+    .fb-modal p { font-size:13px; color:var(--text2); margin-bottom:16px; line-height:1.6; }
+    .fb-modal .field { margin-bottom:10px; }
+    .fb-modal .btn-row { display:flex; gap:8px; margin-top:16px; }
+    .fb-modal .btn { flex:1; padding:10px; font-size:14px; }
   }
 </style>
 </head>
 <body>
+<!-- Mobile Firebase Modal -->
+<div id="fb-modal" class="fb-modal-overlay" style="display:none">
+  <div class="fb-modal">
+    <h3>⚙️ ตั้งค่า Firebase</h3>
+    <p>กรอกค่าจาก Firebase Console เพื่อ sync ข้อมูลกับทุกเครื่อง</p>
+    <input class="field" id="m-apiKey"     placeholder="apiKey"     style="width:100%;margin-bottom:10px">
+    <input class="field" id="m-projectId"  placeholder="projectId"  style="width:100%;margin-bottom:10px">
+    <input class="field" id="m-appId"      placeholder="appId"      style="width:100%;margin-bottom:10px">
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="mobileConnect()" style="flex:1;padding:12px;font-size:14px">เชื่อมต่อ</button>
+      <button class="btn btn-ghost"   onclick="document.getElementById('fb-modal').style.display='none'" style="flex:1;padding:12px;font-size:14px">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <div class="app">
   <aside class="sidebar">
     <div class="logo">
@@ -120,7 +142,7 @@
       <div class="logo-title">สรุปเงินเก็บ <span class="sync-dot offline" id="sync-dot"></span></div>
       <div class="logo-sub" id="sync-label">ยังไม่ได้เชื่อมต่อ</div>
     </div>
-    <div class="status-bar" id="status-bar">กรุณาตั้งค่า Firebase</div>
+    <div class="status-bar" id="status-bar" onclick="openFbModal()" style="cursor:pointer">กรุณาตั้งค่า Firebase 👆</div>
     <nav class="nav">
       <div class="nav-item active" onclick="goto('overview')"><span class="nav-icon">📊</span>ภาพรวม</div>
       <div class="nav-item" onclick="goto('saving')"><span class="nav-icon">🏦</span>บัญชีเงินฝาก</div>
@@ -267,7 +289,32 @@ let db = null, unsub = null;
 const DOC_PATH = 'finance/data';
 let saveTimer = null;
 
-window.connectFirebase = async function() {
+window.openFbModal = function() {
+  const saved = localStorage.getItem('fb_cfg');
+  if (saved) {
+    try {
+      const cfg = JSON.parse(saved);
+      document.getElementById('m-apiKey').value    = cfg.apiKey    || '';
+      document.getElementById('m-projectId').value = cfg.projectId || '';
+      document.getElementById('m-appId').value     = cfg.appId     || '';
+    } catch(e) {}
+  }
+  document.getElementById('fb-modal').style.display = 'flex';
+};
+
+window.mobileConnect = async function() {
+  const apiKey    = document.getElementById('m-apiKey').value.trim();
+  const projectId = document.getElementById('m-projectId').value.trim();
+  const appId     = document.getElementById('m-appId').value.trim();
+  if (!apiKey || !projectId || !appId) { alert('กรุณากรอกให้ครบทั้ง 3 ช่อง'); return; }
+  document.getElementById('cfg-apiKey').value    = apiKey;
+  document.getElementById('cfg-projectId').value = projectId;
+  document.getElementById('cfg-appId').value     = appId;
+  document.getElementById('fb-modal').style.display = 'none';
+  await window.connectFirebase();
+};
+
+
   const apiKey     = document.getElementById('cfg-apiKey').value.trim();
   const projectId  = document.getElementById('cfg-projectId').value.trim();
   const appId      = document.getElementById('cfg-appId').value.trim();
@@ -329,7 +376,8 @@ function setSyncStatus(state, label) {
   const bar = document.getElementById('status-bar');
   dot.className = 'sync-dot ' + state;
   lbl.textContent = label;
-  bar.textContent = label;
+  bar.textContent = state === 'offline' || state === 'ok' && !db ? label + ' 👆' : label;
+  bar.style.cursor = (state === 'offline') ? 'pointer' : 'default';
 }
 
 // Auto-reconnect จาก localStorage
