@@ -314,7 +314,7 @@ window.mobileConnect = async function() {
   await window.connectFirebase();
 };
 
-
+window.connectFirebase = async function() {
   const apiKey     = document.getElementById('cfg-apiKey').value.trim();
   const projectId  = document.getElementById('cfg-projectId').value.trim();
   const appId      = document.getElementById('cfg-appId').value.trim();
