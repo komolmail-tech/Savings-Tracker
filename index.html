@@ -251,7 +251,7 @@
 
 <!-- Firebase SDK -->
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, doc, setDoc, onSnapshot, getDoc }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
@@ -322,7 +322,12 @@ window.mobileConnect = async function() {
 
   try {
     setSyncStatus('saving', 'กำลังเชื่อมต่อ...');
-    const app = initializeApp({ apiKey, projectId, appId, authDomain:`${projectId}.firebaseapp.com`, storageBucket:`${projectId}.appspot.com`, messagingSenderId:'', databaseURL:'' }, 'finance-app');
+    const cfg = { apiKey, projectId, appId,
+      authDomain:`${projectId}.firebaseapp.com`,
+      storageBucket:`${projectId}.appspot.com`,
+      messagingSenderId:'', databaseURL:'' };
+    const existingApps = getApps().filter(a => a.name === 'finance-app');
+    const app = existingApps.length > 0 ? getApp('finance-app') : initializeApp(cfg, 'finance-app');
     db = getFirestore(app);
 
     // ลองดึงข้อมูลครั้งแรก
