@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>สรุปเงินเก็บ — Financial Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117; --bg2: #161b27; --bg3: #1e2638;
+    --border: #2a3450; --border2: #3a4a6a;
+    --blue: #4f8ef7; --blue2: #2563eb;
+    --teal: #2dd4bf; --amber: #f59e0b;
+    --red: #f87171; --green: #4ade80;
+    --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+    --card: #1a2236; --input-bg: #0f1117;
+    --input-border: #2a3450; --input-focus: #4f8ef7;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans Thai', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 240px; background: var(--bg2); border-right: 1px solid var(--border); padding: 24px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .main { flex: 1; padding: 32px 40px; max-width: 900px; }
+
+  .logo { padding: 0 20px 24px; border-bottom: 1px solid var(--border); }
+  .logo-icon { width: 36px; height: 36px; background: var(--blue2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 8px; }
+  .logo-title { font-size: 14px; font-weight: 600; }
+  .logo-sub { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-left: 6px; vertical-align: middle; }
+  .sync-dot.ok { background: var(--green); }
+  .sync-dot.saving { background: var(--amber); animation: pulse .8s ease-in-out infinite; }
+  .sync-dot.offline { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .nav { padding: 16px 0; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; color: var(--text2); font-size: 13px; transition: all .15s; border-left: 2px solid transparent; }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: rgba(79,142,247,.1); color: var(--blue); border-left-color: var(--blue); font-weight: 500; }
+  .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+  .nav-sep { margin: 8px 20px; height: 1px; background: var(--border); }
+
+  .summary-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .sum-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .sum-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+  .sum-value { font-size: 18px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+  .sum-value.blue { color: var(--blue); } .sum-value.green { color: var(--green); }
+  .sum-value.amber { color: var(--amber); } .sum-value.red { color: var(--red); }
+
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn .2s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+  .panel-header { margin-bottom: 20px; }
+  .panel-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .panel-desc { font-size: 13px; color: var(--text3); }
+
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--bg3); }
+  th { padding: 11px 14px; font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 3px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  .field { background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm); padding: 7px 10px; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 13px; color: var(--text); width: 100%; outline: none; transition: border-color .15s; }
+  .field:focus { border-color: var(--input-focus); }
+  .field.num { font-family: 'IBM Plex Mono', monospace; text-align: right; }
+  select.field { cursor: pointer; }
+
+  .total-row td { background: var(--bg3) !important; font-weight: 600; font-family: 'IBM Plex Mono', monospace; color: var(--amber); font-size: 14px; border-top: 1px solid var(--border2); }
+  .total-label { color: var(--text2) !important; font-family: 'IBM Plex Sans Thai', sans-serif !important; font-size: 13px !important; }
+
+  .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; border: none; font-family: 'IBM Plex Sans Thai', sans-serif; transition: all .15s; }
+  .btn-primary { background: var(--blue2); color: #fff; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+  .btn-danger { background: rgba(248,113,113,.1); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  .pl { font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 3px 7px; border-radius: 4px; }
+  .pl.pos { background: rgba(74,222,128,.12); color: var(--green); }
+  .pl.neg { background: rgba(248,113,113,.12); color: var(--red); }
+  .pl.neu { background: rgba(100,116,139,.12); color: var(--text3); }
+
+  .prog-wrap { margin: 4px 0; }
+  .prog-bar { height: 4px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 99px; background: var(--blue); }
+
+  /* ── Firebase setup banner ── */
+  .setup-banner { background: var(--bg3); border: 1px solid var(--amber); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 24px; }
+  .setup-title { font-size: 14px; font-weight: 600; color: var(--amber); margin-bottom: 8px; }
+  .setup-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .setup-input-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .setup-input-row .field { max-width: 280px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+  .status-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text3); padding: 0 20px 16px; }
+
+  @media (max-width: 768px) {
+    .app { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; padding: 12px 0; display: flex; overflow-x: auto; }
+    .logo { display: none; }
+    .nav { display: flex; padding: 0; }
+    .nav-item { white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; padding: 10px 14px; }
+    .nav-item.active { border-bottom-color: var(--blue); border-left: none; }
+    .nav-sep { display: none; }
+    .main { padding: 16px; }
+    .summary-bar { grid-template-columns: repeat(2, 1fr); }
+    .setup-banner { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">💰</div>
+      <div class="logo-title">สรุปเงินเก็บ <span class="sync-dot offline" id="sync-dot"></span></div>
+      <div class="logo-sub" id="sync-label">ยังไม่ได้เชื่อมต่อ</div>
+    </div>
+    <div class="status-bar" id="status-bar">กรุณาตั้งค่า Firebase</div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="goto('overview')"><span class="nav-icon">📊</span>ภาพรวม</div>
+      <div class="nav-item" onclick="goto('saving')"><span class="nav-icon">🏦</span>บัญชีเงินฝาก</div>
+      <div class="nav-item" onclick="goto('invest')"><span class="nav-icon">📈</span>การลงทุน</div>
+      <div class="nav-item" onclick="goto('loan')"><span class="nav-icon">🤝</span>เงินให้ยืม</div>
+      <div class="nav-item" onclick="goto('longterm')"><span class="nav-icon">🔒</span>เงินออมระยะยาว</div>
+      <div class="nav-sep"></div>
+      <div class="nav-item" onclick="exportJSON()"><span class="nav-icon">💾</span>Export JSON</div>
+    </nav>
+  </aside>
+
+  <main class="main">
+
+    <!-- Firebase Setup Banner -->
+    <div class="setup-banner" id="setup-banner">
+      <div class="setup-title">⚙️ ตั้งค่า Firebase เพื่อเชื่อมข้อมูล Cloud</div>
+      <div class="setup-body">
+        วางค่า <strong>Firebase config</strong> จาก Firebase Console ด้านล่าง แล้วกด "เชื่อมต่อ"<br>
+        ข้อมูลจะ sync อัตโนมัติทุกเครื่องที่เปิด URL นี้ — ดูวิธีได้ใน README.md ที่แนบมา
+      </div>
+      <div class="setup-input-row">
+        <input class="field" id="cfg-apiKey"            placeholder="apiKey"            style="flex:1;min-width:200px">
+        <input class="field" id="cfg-projectId"         placeholder="projectId"         style="flex:1;min-width:160px">
+        <input class="field" id="cfg-appId"             placeholder="appId"             style="flex:1;min-width:200px">
+      </div>
+      <div class="btn-row" style="margin-top:10px;justify-content:flex-start">
+        <button class="btn btn-primary" onclick="connectFirebase()">เชื่อมต่อ Firebase</button>
+        <button class="btn btn-ghost" onclick="dismissSetup()">ใช้งาน offline ก่อน</button>
+      </div>
+    </div>
+
+    <!-- Summary Bar -->
+    <div class="summary-bar">
+      <div class="sum-card"><div class="sum-label">เงินฝากรวม</div><div class="sum-value blue" id="total-saving">0</div></div>
+      <div class="sum-card"><div class="sum-label">การลงทุน</div><div class="sum-value green" id="total-invest">0</div></div>
+      <div class="sum-card"><div class="sum-label">เงินให้ยืม</div><div class="sum-value amber" id="total-loan">0</div></div>
+      <div class="sum-card"><div class="sum-label">Net Worth รวม</div><div class="sum-value blue" id="total-all">0</div></div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div id="panel-overview" class="panel active">
+      <div class="panel-header"><div class="panel-title">ภาพรวมการเงิน</div><div class="panel-desc">สรุปสินทรัพย์ทั้งหมดแบบ real-time</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>หมวดหมู่</th><th>มูลค่า (บาท)</th><th>สัดส่วน</th></tr></thead>
+          <tbody id="overview-body"></tbody>
+          <tfoot><tr class="total-row"><td class="total-label">รวม Grand Total</td><td id="ov-grand" style="text-align:right;padding-right:14px"></td><td></td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- SAVING -->
+    <div id="panel-saving" class="panel">
+      <div class="panel-header"><div class="panel-title">บัญชีเงินฝาก</div><div class="panel-desc">ธนาคารและบัญชีออมทรัพย์ทั้งหมด</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>ธนาคาร / บัญชี</th><th>เลขบัญชี</th><th style="text-align:right">ยอดคงเหลือ (บาท)</th><th>ประเภท</th><th>หมายเหตุ</th><th></th></tr></thead>
+          <tbody id="saving-body"></tbody>
+          <tfoot><tr class="total-row"><td colspan="3" class="total-label" style="padding-left:14px">รวมเงินฝาก</td><td id="saving-total" style="text-align:right;padding-right:14px"></td><td colspan="3"></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="addRow('saving')">+ เพิ่มบัญชี</button></div>
+    </div>
+
+    <!-- INVEST -->
+    <div id="panel-invest" class="panel">
+      <div class="panel-header"><div class="panel-title">การลงทุน</div><div class="panel-desc">ติดตามพอร์ตลงทุนและกำไร/ขาดทุน</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>ประเภท</th><th style="text-align:right">ทุน (บาท)</th><th style="text-align:right">มูลค่าปัจจุบัน</th><th>กำไร/ขาดทุน</th><th>หมายเหตุ</th><th></th></tr></thead>
+          <tbody id="invest-body"></tbody>
+          <tfoot><tr class="total-row"><td colspan="2" class="total-label" style="padding-left:14px">รวม</td><td id="invest-cost" style="text-align:right;padding-right:6px"></td><td id="invest-total" style="text-align:right;padding-right:14px"></td><td id="invest-pl"></td><td colspan="2"></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="addRow('invest')">+ เพิ่มการลงทุน</button></div>
+    </div>
+
+    <!-- LOAN -->
+    <div id="panel-loan" class="panel">
+      <div class="panel-header"><div class="panel-title">เงินให้ยืม</div><div class="panel-desc">ติดตามเงินที่ให้ผู้อื่นยืม</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>ชื่อ</th><th style="text-align:right">จำนวน (บาท)</th><th>วันที่ให้ยืม</th><th>กำหนดคืน</th><th>สถานะ</th><th></th></tr></thead>
+          <tbody id="loan-body"></tbody>
+          <tfoot><tr class="total-row"><td colspan="2" class="total-label" style="padding-left:14px">รวมเงินให้ยืม</td><td id="loan-total" style="text-align:right;padding-right:14px"></td><td colspan="4"></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="addRow('loan')">+ เพิ่มรายการ</button></div>
+    </div>
+
+    <!-- LONGTERM -->
+    <div id="panel-longterm" class="panel">
+      <div class="panel-header"><div class="panel-title">เงินออมระยะยาว</div><div class="panel-desc">PVD, ประกันชีวิต และสลาก</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>รายการ</th><th style="text-align:right">มูลค่า (บาท)</th><th>วันครบกำหนด</th><th>เงื่อนไข</th><th>หมายเหตุ</th><th></th></tr></thead>
+          <tbody id="longterm-body"></tbody>
+          <tfoot><tr class="total-row"><td colspan="2" class="total-label" style="padding-left:14px">รวมออมระยะยาว</td><td id="longterm-total" style="text-align:right;padding-right:14px"></td><td colspan="4"></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="addRow('longterm')">+ เพิ่มรายการ</button></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, onSnapshot, getDoc }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ── Default state ─────────────────────────────────────────────────────────
+window.state = {
+  saving: [
+    {bank:"K Bank", acno:"059-2-22459-5", bal:25812.13, type:"ออมทรัพย์", note:"เงินเดือน"},
+    {bank:"SCB Online", acno:"432-206577-2", bal:1577534.28, type:"ออมทรัพย์ดิจิทัล", note:"ดอกเบี้ย 1.5%"},
+    {bank:"SCB (จ่ายบัตร)", acno:"071-281707-8", bal:321.45, type:"ออมทรัพย์", note:"ไว้จ่ายบัตรเครดิต"},
+    {bank:"ออมสิน", acno:"020427809056", bal:4190.50, type:"ออมทรัพย์", note:""},
+    {bank:"สลากออมสิน", acno:"400111697639", bal:100000, type:"สลาก", note:"1 ปี 6/4/2025"},
+    {bank:"Cash", acno:"", bal:1000, type:"เงินสด", note:""},
+  ],
+  invest: [
+    {name:"Bitcoin", cost:390000, cur:271686.50, note:""},
+    {name:"Gold Digital", cost:450000, cur:429437.91, note:""},
+    {name:"Gold Physical", cost:140200, cur:140200, note:"2 บาททอง"},
+    {name:"SCB RMS&P500", cost:100000, cur:102983.72, note:"กองทุน"},
+  ],
+  loan: [
+    {name:"แว่น", amount:285000, date:"", due:"", status:"รอรับคืน"},
+    {name:"ตุ๋ย", amount:5000, date:"", due:"", status:"รอรับคืน"},
+    {name:"เชาว์", amount:20000, date:"", due:"", status:"รอรับคืน"},
+    {name:"อาปอง", amount:20000, date:"", due:"", status:"รอรับคืน"},
+  ],
+  longterm: [
+    {name:"กองทุนสำรองเลี้ยงชีพ (PVD)", val:1801306.18, due:"", cond:"รับเมื่อออกจากงาน", note:""},
+    {name:"ประกันพรูเดนเชียล -1 (3056840)", val:225000, due:"30/10/2576", cond:"ได้คืนทุกๆ เดือน 10", note:"6,000/เดือน"},
+    {name:"ประกันพรูเดนเชียล -2 (3756465)", val:225000, due:"19/8/2586", cond:"ได้คืนทุกๆ เดือน 8", note:"3,000-6,000/เดือน"},
+  ]
+};
+
+// ── Firebase globals ───────────────────────────────────────────────────────
+let db = null, unsub = null;
+const DOC_PATH = 'finance/data';
+let saveTimer = null;
+
+window.connectFirebase = async function() {
+  const apiKey     = document.getElementById('cfg-apiKey').value.trim();
+  const projectId  = document.getElementById('cfg-projectId').value.trim();
+  const appId      = document.getElementById('cfg-appId').value.trim();
+  if (!apiKey || !projectId || !appId) { alert('กรุณากรอก apiKey, projectId และ appId ให้ครบ'); return; }
+
+  try {
+    setSyncStatus('saving', 'กำลังเชื่อมต่อ...');
+    const app = initializeApp({ apiKey, projectId, appId, authDomain:`${projectId}.firebaseapp.com`, storageBucket:`${projectId}.appspot.com`, messagingSenderId:'', databaseURL:'' }, 'finance-app');
+    db = getFirestore(app);
+
+    // ลองดึงข้อมูลครั้งแรก
+    const snap = await getDoc(doc(db, DOC_PATH));
+    if (snap.exists()) {
+      window.state = snap.data();
+    } else {
+      // ครั้งแรกที่ใช้ — บันทึก default state ขึ้น Firestore
+      await setDoc(doc(db, DOC_PATH), window.state);
+    }
+
+    // Real-time listener: ถ้าเครื่องอื่นแก้ไข จะ update UI อัตโนมัติ
+    if (unsub) unsub();
+    unsub = onSnapshot(doc(db, DOC_PATH), (s) => {
+      if (s.exists()) { window.state = s.data(); render(); }
+    });
+
+    // บันทึก config ลง localStorage ไว้ใช้ครั้งต่อไป
+    localStorage.setItem('fb_cfg', JSON.stringify({ apiKey, projectId, appId }));
+    document.getElementById('setup-banner').style.display = 'none';
+    setSyncStatus('ok', 'เชื่อมต่อ Firebase แล้ว');
+    render();
+  } catch(e) {
+    setSyncStatus('offline', 'เชื่อมต่อไม่ได้');
+    alert('เชื่อมต่อ Firebase ไม่สำเร็จ:\n' + e.message);
+  }
+};
+
+window.saveToFirebase = async function() {
+  if (!db) return;
+  setSyncStatus('saving', 'กำลังบันทึก...');
+  try {
+    await setDoc(doc(db, DOC_PATH), window.state);
+    setSyncStatus('ok', 'บันทึกแล้ว ' + new Date().toLocaleTimeString('th-TH'));
+  } catch(e) {
+    setSyncStatus('offline', 'บันทึกไม่สำเร็จ');
+  }
+};
+
+// debounce save — รอ 1 วิหลังหยุดพิมพ์ค่อย save
+window.scheduleSave = function() {
+  if (!db) return;
+  setSyncStatus('saving', 'รอบันทึก...');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(window.saveToFirebase, 1000);
+};
+
+function setSyncStatus(state, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  const bar = document.getElementById('status-bar');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+  bar.textContent = label;
+}
+
+// Auto-reconnect จาก localStorage
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('fb_cfg');
+  if (saved) {
+    try {
+      const cfg = JSON.parse(saved);
+      document.getElementById('cfg-apiKey').value    = cfg.apiKey    || '';
+      document.getElementById('cfg-projectId').value = cfg.projectId || '';
+      document.getElementById('cfg-appId').value     = cfg.appId     || '';
+      window.connectFirebase();
+    } catch(e) {}
+  }
+  render();
+});
+
+window.dismissSetup = function() {
+  document.getElementById('setup-banner').style.display = 'none';
+  setSyncStatus('offline', 'Offline mode');
+};
+</script>
+
+<script>
+// ── Utilities ──────────────────────────────────────────────────────────────
+const fmt = n => isNaN(n) ? "0" : Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const inp = (v,cls="") => `<input class="field ${cls}" value="${(v??'').toString().replace(/"/g,'&quot;')}" oninput="save(this)" style="min-width:90px">`;
+const num = (v) => `<input class="field num" value="${v??0}" oninput="save(this)" style="min-width:100px">`;
+const sel = (v,opts) => `<select class="field" oninput="save(this)">${opts.map(o=>`<option${o==v?' selected':''}>${o}</option>`).join('')}</select>`;
+const del_btn = `<button class="btn btn-danger btn-sm" onclick="delRow(this)">✕</button>`;
+const pl_chip = (cost,cur) => {
+  const d = cur-cost, p = cost>0?(d/cost*100):0;
+  return `<span class="pl ${d>0?'pos':d<0?'neg':'neu'}">${d>=0?'+':''}${fmt(d)} (${d>=0?'+':''}${p.toFixed(1)}%)</span>`;
+};
+
+function goto(id) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function render() {
+  renderSaving(); renderInvest(); renderLoan(); renderLongterm(); renderOverview();
+  updateSummaryBar();
+}
+
+function renderSaving() {
+  document.getElementById('saving-body').innerHTML = state.saving.map((r,i)=>`
+    <tr data-section="saving" data-idx="${i}">
+      <td style="padding-left:14px;color:var(--text3);font-size:12px">${i+1}</td>
+      <td>${inp(r.bank)}</td><td>${inp(r.acno)}</td>
+      <td style="text-align:right">${num(r.bal)}</td>
+      <td>${inp(r.type)}</td><td>${inp(r.note)}</td><td>${del_btn}</td>
+    </tr>`).join('');
+  document.getElementById('saving-total').textContent = fmt(state.saving.reduce((s,r)=>s+Number(r.bal),0));
+}
+
+function renderInvest() {
+  document.getElementById('invest-body').innerHTML = state.invest.map((r,i)=>`
+    <tr data-section="invest" data-idx="${i}">
+      <td style="padding-left:14px;color:var(--text3);font-size:12px">${i+1}</td>
+      <td>${inp(r.name)}</td>
+      <td style="text-align:right">${num(r.cost)}</td>
+      <td style="text-align:right">${num(r.cur)}</td>
+      <td>${pl_chip(Number(r.cost),Number(r.cur))}</td>
+      <td>${inp(r.note)}</td><td>${del_btn}</td>
+    </tr>`).join('');
+  const tc = state.invest.reduce((s,r)=>s+Number(r.cost),0);
+  const tv = state.invest.reduce((s,r)=>s+Number(r.cur),0);
+  document.getElementById('invest-cost').textContent = fmt(tc);
+  document.getElementById('invest-total').textContent = fmt(tv);
+  document.getElementById('invest-pl').innerHTML = pl_chip(tc,tv);
+}
+
+function renderLoan() {
+  document.getElementById('loan-body').innerHTML = state.loan.map((r,i)=>`
+    <tr data-section="loan" data-idx="${i}">
+      <td style="padding-left:14px;color:var(--text3);font-size:12px">${i+1}</td>
+      <td>${inp(r.name)}</td>
+      <td style="text-align:right">${num(r.amount)}</td>
+      <td>${inp(r.date)}</td><td>${inp(r.due)}</td>
+      <td>${sel(r.status,["รอรับคืน","รับคืนแล้ว","ค้างชำระ"])}</td><td>${del_btn}</td>
+    </tr>`).join('');
+  document.getElementById('loan-total').textContent = fmt(state.loan.reduce((s,r)=>s+Number(r.amount),0));
+}
+
+function renderLongterm() {
+  document.getElementById('longterm-body').innerHTML = state.longterm.map((r,i)=>`
+    <tr data-section="longterm" data-idx="${i}">
+      <td style="padding-left:14px;color:var(--text3);font-size:12px">${i+1}</td>
+      <td>${inp(r.name)}</td>
+      <td style="text-align:right">${num(r.val)}</td>
+      <td>${inp(r.due)}</td><td>${inp(r.cond)}</td><td>${inp(r.note)}</td><td>${del_btn}</td>
+    </tr>`).join('');
+  document.getElementById('longterm-total').textContent = fmt(state.longterm.reduce((s,r)=>s+Number(r.val),0));
+}
+
+function renderOverview() {
+  const sections = [
+    {label:"เงินฝากธนาคาร 🏦", val: state.saving.reduce((s,r)=>s+Number(r.bal),0)},
+    {label:"การลงทุน 📈",       val: state.invest.reduce((s,r)=>s+Number(r.cur),0)},
+    {label:"เงินให้ยืม 🤝",     val: state.loan.reduce((s,r)=>s+Number(r.amount),0)},
+    {label:"เงินออมระยะยาว 🔒", val: state.longterm.reduce((s,r)=>s+Number(r.val),0)},
+  ];
+  const grand = sections.reduce((s,r)=>s+r.val,0);
+  document.getElementById('overview-body').innerHTML = sections.map(s=>{
+    const pct = grand>0?s.val/grand*100:0;
+    return `<tr>
+      <td style="padding:10px 14px;font-size:14px">${s.label}</td>
+      <td style="text-align:right;padding-right:14px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--blue)">${fmt(s.val)}</td>
+      <td style="padding:10px 14px;min-width:140px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px">${pct.toFixed(1)}%</div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+      </td></tr>`;
+  }).join('');
+  document.getElementById('ov-grand').textContent = fmt(grand);
+}
+
+function updateSummaryBar() {
+  const sv = state.saving.reduce((s,r)=>s+Number(r.bal),0);
+  const iv = state.invest.reduce((s,r)=>s+Number(r.cur),0);
+  const lv = state.loan.reduce((s,r)=>s+Number(r.amount),0);
+  const lt = state.longterm.reduce((s,r)=>s+Number(r.val),0);
+  document.getElementById('total-saving').textContent = fmt(sv);
+  document.getElementById('total-invest').textContent = fmt(iv);
+  document.getElementById('total-loan').textContent   = fmt(lv);
+  document.getElementById('total-all').textContent    = fmt(sv+iv+lv+lt);
+}
+
+function save(el) {
+  const tr = el.closest('tr');
+  const sec = tr.dataset.section, idx = parseInt(tr.dataset.idx);
+  const cells = tr.querySelectorAll('input,select');
+  const keys = {
+    saving:   ['bank','acno','bal','type','note'],
+    invest:   ['name','cost','cur','note'],
+    loan:     ['name','amount','date','due','status'],
+    longterm: ['name','val','due','cond','note'],
+  };
+  cells.forEach((c,i) => { const k = keys[sec][i]; if(k) state[sec][idx][k] = c.value; });
+  // update totals + pl chip inline
+  if(sec==='invest') {
+    const pl = tr.querySelectorAll('td')[4];
+    if(pl) pl.innerHTML = pl_chip(Number(state.invest[idx].cost), Number(state.invest[idx].cur));
+    const tc=state.invest.reduce((s,r)=>s+Number(r.cost),0);
+    const tv=state.invest.reduce((s,r)=>s+Number(r.cur),0);
+    document.getElementById('invest-cost').textContent=fmt(tc);
+    document.getElementById('invest-total').textContent=fmt(tv);
+    document.getElementById('invest-pl').innerHTML=pl_chip(tc,tv);
+  }
+  if(sec==='saving') document.getElementById('saving-total').textContent=fmt(state.saving.reduce((s,r)=>s+Number(r.bal),0));
+  if(sec==='loan')   document.getElementById('loan-total').textContent=fmt(state.loan.reduce((s,r)=>s+Number(r.amount),0));
+  if(sec==='longterm') document.getElementById('longterm-total').textContent=fmt(state.longterm.reduce((s,r)=>s+Number(r.val),0));
+  renderOverview(); updateSummaryBar();
+  if(window.scheduleSave) window.scheduleSave();
+}
+
+function addRow(sec) {
+  const d = { saving:{bank:"",acno:"",bal:0,type:"ออมทรัพย์",note:""}, invest:{name:"",cost:0,cur:0,note:""}, loan:{name:"",amount:0,date:"",due:"",status:"รอรับคืน"}, longterm:{name:"",val:0,due:"",cond:"",note:""} };
+  state[sec].push({...d[sec]});
+  render();
+  if(window.scheduleSave) window.scheduleSave();
+}
+
+function delRow(btn) {
+  const tr = btn.closest('tr');
+  state[tr.dataset.section].splice(parseInt(tr.dataset.idx),1);
+  render();
+  if(window.scheduleSave) window.scheduleSave();
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'สรุปเงินเก็บ_backup_'+ new Date().toLocaleDateString('th-TH').replace(/\//g,'-')+'.json';
+  a.click();
+}
+
+render();
+</script>
+</body>
+</html>
