@@ -294,7 +294,16 @@ function scheduleSave(){
 function fmt(n){ return isNaN(n)?'0':Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function sumOf(arr,k){ return arr.reduce(function(s,r){return s+Number(r[k]);},0); }
 function inp(v,cls){ cls=cls||''; return '<input class="field '+cls+'" value="'+(v||'').toString().replace(/"/g,'&quot;')+'" oninput="saveCell(this)" style="min-width:90px">'; }
-function num(v){ return '<input class="field num" value="'+(v||0)+'" oninput="saveCell(this)" style="min-width:100px">'; }
+function toRaw(s){ return (s||'0').toString().replace(/,/g,''); }
+function num(v){
+  var raw=parseFloat(toRaw(v))||0;
+  var disp=raw.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return '<input class="field num" value="'+disp+'" data-raw="'+raw+'" '
+    +'onfocus="this.value=parseFloat(this.dataset.raw)||0;this.select()" '
+    +'onblur="var n=parseFloat(this.value.replace(/,/g,\'\'))||0;this.dataset.raw=n;this.value=n.toLocaleString(\'th-TH\',{minimumFractionDigits:2,maximumFractionDigits:2});saveCell(this)" '
+    +'oninput="this.dataset.raw=this.value.replace(/,/g,\'\')" '
+    +'style="min-width:110px">';
+}
 function sel(v,opts){ return '<select class="field" oninput="saveCell(this)">'+opts.map(function(o){return '<option'+(o==v?' selected':'')+'>'+o+'</option>';}).join('')+'</select>'; }
 var DEL='<button class="btn btn-danger btn-sm" onclick="delRow(this)">✕</button>';
 function plChip(c,v){ var d=v-c,p=c>0?d/c*100:0,cls=d>0?'pos':d<0?'neg':'neu'; return '<span class="pl '+cls+'">'+(d>=0?'+':'')+fmt(d)+' ('+(d>=0?'+':'')+p.toFixed(1)+'%)</span>'; }
@@ -374,7 +383,7 @@ function updateBar(){
 var KEYS={saving:['bank','acno','bal','type','note'],invest:['name','cost','cur','note'],loan:['name','amount','date','due','status'],longterm:['name','val','due','cond','note']};
 function saveCell(el){
   var tr=el.closest('tr'),sec=tr.dataset.sec,idx=parseInt(tr.dataset.idx);
-  tr.querySelectorAll('input,select').forEach(function(c,i){var k=KEYS[sec][i];if(k)state[sec][idx][k]=c.value;});
+  tr.querySelectorAll('input,select').forEach(function(c,i){var k=KEYS[sec][i];if(k)state[sec][idx][k]='dataset' in c&&c.dataset.raw!==undefined&&c.classList.contains('num')?c.dataset.raw:c.value;});
   if(sec==='invest'){
     var pl=tr.querySelectorAll('td')[4];if(pl)pl.innerHTML=plChip(Number(state.invest[idx].cost),Number(state.invest[idx].cur));
     var tc=sumOf(state.invest,'cost'),tv=sumOf(state.invest,'cur');
