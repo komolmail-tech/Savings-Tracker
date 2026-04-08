@@ -538,7 +538,8 @@ function renderOverview() {
       </td></tr>`;
   }).join('');
   document.getElementById('ov-grand').textContent = fmt(grand);
-}
+  if (typeof renderDonut === 'function' && typeof Chart !== 'undefined') renderDonut();
+}}
 
 function updateSummaryBar() {
   const sv = state.saving.reduce((s,r)=>s+Number(r.bal),0);
@@ -693,13 +694,6 @@ function renderDonut() {
       animation: { duration: 600 }
     }
   });
-}
-
-// hook into existing render
-const _origRenderOverview = renderOverview;
-function renderOverview() {
-  _origRenderOverview();
-  if (typeof Chart !== 'undefined') renderDonut();
 }
 
 // เรียก donut หลัง Chart.js โหลดเสร็จ
